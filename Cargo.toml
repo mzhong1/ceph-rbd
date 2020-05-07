@@ -14,7 +14,7 @@ version = "0.3.2"
 bindgen = "0.47.1"
 
 [dependencies]
-ceph = "~3"
+ceph = {git = "https://github.com/ceph/ceph-rust.git"}#"~3"
 libc = "~0.2"
 log = "~0.4"
 nix = "~0.10"
