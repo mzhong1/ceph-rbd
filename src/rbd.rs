@@ -406,7 +406,7 @@ impl Rbd {
 
     */
 
-    pub fn rbd_list_locks(&self, image: RbdImage) -> RadosResult<Vec<String>> {
+    pub fn rbd_list_locks(image: RbdImage) -> RadosResult<Vec<String>> {
         let mut clients: Vec<i8> = Vec::with_capacity(0);
         let mut client_size: usize = clients.capacity();
         let mut exclusive: i32 = 0;
