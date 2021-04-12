@@ -405,6 +405,62 @@ impl Rbd {
     }
 
     */
+
+    pub fn rbd_list_locks(&self, image: RbdImage) -> RadosResult<Vec<String>> {
+        let mut clients: Vec<i8> = Vec::with_capacity(0);
+        let mut client_size: usize = clients.capacity();
+        let mut exclusive: i32 = 0;
+        let tag = CString::new("")?;
+        let mut tag_len: usize = 0;
+        let cookies = CString::new("")?;
+        let mut cookies_len: usize = 0;
+        let addrs = CString::new("")?;
+        let mut addrs_len: usize = 0;
+
+        let mut locks: Vec<String> = Vec::new();
+        unsafe {
+            trace!("running list_lockers with size: {}", client_size);
+            let retcode = rbd_list_lockers(
+                image.image, &mut exclusive, tag.into_raw(), &mut tag_len, clients.as_mut_ptr(), 
+                &mut client_size, cookies.into_raw(), &mut cookies_len, addrs.into_raw(), &mut addrs_len);
+            
+            trace!("rbd_list retcode: {}", retcode);
+            // If this is returned that means our buffer was too small
+            if retcode as i32 == -(nix::errno::Errno::ERANGE as i32) {
+                // provided byte array is smaller than listing size
+                trace!("Resizing to {}", client_size + 1);
+                clients = Vec::with_capacity(client_size + 1);
+            } else if retcode < 0 {
+                // This is an actual error
+                return Err(RadosError::new(get_error(retcode as i32)?));
+            }
+
+        }
+
+        let new_buff: Vec<u8> = clients.iter().map(|c| c.clone() as u8).collect();
+        let mut cursor = Cursor::new(&new_buff);
+        loop {
+            let mut string_buf: Vec<u8> = Vec::new();
+            let read = cursor.read_until(0x00, &mut string_buf)?;
+            if read == 0 {
+                // End of name_buff;
+                break;
+            } else {
+                // Read a String
+                // name_list.push(String::from_utf8_lossy(&string_buf[..read - 1]).into_owned());
+                // Remove the trailing \0
+                string_buf.pop();
+                let s = String::from_utf8(string_buf)?;
+                if !s.is_empty() {
+                    locks.push(s);
+                }
+            }
+        }
+
+        Ok(locks)
+
+    }
+
     pub fn list(&self, ioctx: &IoCtx) -> RadosResult<Vec<String>> {
         let mut name_buff: Vec<i8> = Vec::with_capacity(0);
         let mut name_size: usize = name_buff.capacity();
